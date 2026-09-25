@@ -20,6 +20,7 @@ export default function Navbar() {
   const [visible, setVisible] = useState(true);
 
   const isHomePage = pathname === '/';
+  const isDesignsPage = pathname === '/designs';
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -236,6 +237,11 @@ export default function Navbar() {
     }
   };
 
+  // Safe early exit AFTER all hooks are called
+  if (isDesignsPage) {
+    return null;
+  }
+
   const isAtTop = !scrolled;
   const isLightTheme = theme === 'light';
 
@@ -246,7 +252,6 @@ export default function Navbar() {
   // Hamburger colour: white on hero at-top, otherwise theme text colour
   const hamburgerColor =
     isAtTop && isHomePage ? 'rgba(255,255,255,0.9)' : 'var(--color-text)';
-
 
   return (
     <>
@@ -373,9 +378,6 @@ export default function Navbar() {
           <a href="https://wa.me/+9779814364007?text=Hello%20Rajan,%20Let%27s%20work%20together." target="_blank" rel="noopener noreferrer">
             WhatsApp
           </a>
-          {/* <a href="https://github.com/rajan-khadkaa" target="_blank" rel="noopener noreferrer">
-            GitHub
-          </a> */}
         </div>
       </div>
     </>

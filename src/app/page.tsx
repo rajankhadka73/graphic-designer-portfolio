@@ -5,13 +5,16 @@ import Skills from '@/components/home/Skills';
 import Process from '@/components/home/Process';
 import Contact from '@/components/home/Contact';
 import Divider from '@/components/ui/Divider';
+import { getFeaturedDesigns } from '@/lib/designs';
 
 export default function Home() {
+  const featuredDesigns = getFeaturedDesigns();
+
   return (
     <main>
       <Hero />
       <Divider />
-      <Works />
+      <Works initialDesigns={featuredDesigns} />
       <Divider />
       <Skills />
       <Divider />

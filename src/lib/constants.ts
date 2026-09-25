@@ -20,15 +20,9 @@ export const SKILLS_LIST = [
   'InDesign',
   'Figma',
   'Canva',
+  'Typography',
   'Brand Identity',
   'Poster Design',
-  'Typography',
-  'Color Theory',
-  'Social Media Creatives',
-  'Photo Manipulation',
-  'Vector Art',
-  'Print Design',
-  'Visual Layout',
 ];
 
 export const PROCESS_STEPS: ProcessStep[] = [

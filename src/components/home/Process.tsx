@@ -7,18 +7,6 @@ import SectionHeader from '../ui/SectionHeader';
 import ScrollReveal from '../ui/ScrollReveal';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-// Read a CSS custom property from :root as a hex-parseable color string.
-// Falls back to the supplied default if the variable is missing.
-function readCSSColor(varName: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue(varName)
-    .trim();
-  return raw || fallback;
-}
-
-// ─── Shared material factory ──────────────────────────────────────────────────
-// We make a slightly warm silver that reads clearly on both light and dark bg.
 function makeMat(color = 0xb8b8c0) {
   return new THREE.MeshStandardMaterial({
     color,
@@ -28,22 +16,23 @@ function makeMat(color = 0xb8b8c0) {
   });
 }
 
+export interface MouseState {
+  x: number;
+  y: number;
+}
+
 // ─── Scene builders ───────────────────────────────────────────────────────────
 
-function buildDiscoverScene(renderer: THREE.WebGLRenderer) {
+function buildDiscoverScene(renderer: THREE.WebGLRenderer, mouse: MouseState) {
   const scene = new THREE.Scene();
-  // Transparent – canvas background set via CSS variable
-  // scene.background not set → alpha pass-through
-
   const camera = new THREE.PerspectiveCamera(34, 340 / 510, 0.1, 100);
   camera.position.set(0, 0, 5.8);
 
-  // Stronger ambient so the tunnel reads on a light background too
-  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 5.5);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 6.0);
   keyLight.position.set(-5, 7, 3);
   scene.add(keyLight);
-  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.4);
+  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.5);
   fillLight.position.set(4, -3, 1);
   scene.add(fillLight);
 
@@ -51,7 +40,6 @@ function buildDiscoverScene(renderer: THREE.WebGLRenderer) {
   scene.add(group);
 
   const mat = makeMat(0xc0c0cc);
-
   const fw = 1.35, fh = 1.85, depth = 6.8, wallThick = 0.14;
 
   const topWall = new THREE.Mesh(new THREE.BoxGeometry(fw, wallThick, depth), mat);
@@ -77,36 +65,42 @@ function buildDiscoverScene(renderer: THREE.WebGLRenderer) {
   dot.position.set(0, 0, -depth + 0.05);
   group.add(dot);
 
-  const sweepLight = new THREE.PointLight(0xffffff, 10, 9);
+  const sweepLight = new THREE.PointLight(0xffffff, 12, 10);
   group.add(sweepLight);
 
   const clock = new THREE.Clock();
   let animId: number;
+
   function animate() {
     animId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    group.rotation.x = Math.sin(t * 0.1) * 0.02;
-    group.rotation.y = Math.sin(t * 0.07) * 0.015;
-    const p = (t * 0.2) % 1.0;
+
+    // Calm continuous floating + subtle mouse tilt
+    group.rotation.x = Math.sin(t * 0.35) * 0.05 - mouse.y * 0.18;
+    group.rotation.y = Math.cos(t * 0.30) * 0.07 + mouse.x * 0.18;
+    group.position.y = Math.sin(t * 0.4) * 0.035;
+
+    // Sweeping beam of light through tunnel in a relaxed ~4.5s loop
+    const p = (t * 0.22) % 1.0;
     sweepLight.position.set(0, 0, -depth + p * depth);
-    sweepLight.intensity = Math.sin(p * Math.PI) * 10;
+    sweepLight.intensity = Math.sin(p * Math.PI) * 12;
+
     renderer.render(scene, camera);
   }
   animate();
   return () => cancelAnimationFrame(animId);
 }
 
-function buildDesignScene(renderer: THREE.WebGLRenderer) {
+function buildDesignScene(renderer: THREE.WebGLRenderer, mouse: MouseState) {
   const scene = new THREE.Scene();
-
   const camera = new THREE.PerspectiveCamera(34, 340 / 510, 0.1, 100);
   camera.position.set(0, 0, 5.8);
 
   scene.add(new THREE.AmbientLight(0xffffff, 3.5));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 5.5);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 6.0);
   keyLight.position.set(-5, 7, 3);
   scene.add(keyLight);
-  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.4);
+  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.5);
   fillLight.position.set(4, -3, 1);
   scene.add(fillLight);
 
@@ -114,7 +108,7 @@ function buildDesignScene(renderer: THREE.WebGLRenderer) {
   scene.add(group);
 
   const mat = makeMat(0xb0b0bc);
-  const wireMat = new THREE.LineBasicMaterial({ color: 0x999999 });
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x888899 });
 
   const core = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.6, 0.7), mat);
   group.add(core);
@@ -125,37 +119,45 @@ function buildDesignScene(renderer: THREE.WebGLRenderer) {
   );
   group.add(wireframe);
 
-  const fragment = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), mat);
+  const fragment = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), mat);
   fragment.position.set(0.55, 0.75, 0.35);
   group.add(fragment);
 
   const clock = new THREE.Clock();
   let animId: number;
+
   function animate() {
     animId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    group.rotation.x = 0.25 + Math.sin(t * 0.12) * 0.025;
-    group.rotation.y = 0.35 + Math.sin(t * 0.085) * 0.018;
-    wireframe.position.y = Math.sin(t * 0.4) * 0.03;
-    fragment.position.x = 0.55 + Math.cos(t * 0.6) * 0.04;
-    fragment.rotation.y = t * 0.15;
+
+    // Calm floating rotation + subtle mouse tilt
+    group.rotation.x = 0.22 + Math.sin(t * 0.35) * 0.05 - mouse.y * 0.18;
+    group.rotation.y = 0.35 + Math.sin(t * 0.30) * 0.07 + mouse.x * 0.18;
+    group.position.y = Math.sin(t * 0.4) * 0.035;
+
+    // Gentle wireframe movement and fragment orbit
+    wireframe.position.y = Math.sin(t * 0.45) * 0.04;
+    fragment.position.x = 0.55 + Math.cos(t * 0.55) * 0.07;
+    fragment.position.y = 0.75 + Math.sin(t * 0.55) * 0.07;
+    fragment.rotation.y = t * 0.45;
+    fragment.rotation.x = t * 0.3;
+
     renderer.render(scene, camera);
   }
   animate();
   return () => cancelAnimationFrame(animId);
 }
 
-function buildTestScene(renderer: THREE.WebGLRenderer) {
+function buildTestScene(renderer: THREE.WebGLRenderer, mouse: MouseState) {
   const scene = new THREE.Scene();
-
   const camera = new THREE.PerspectiveCamera(34, 340 / 510, 0.1, 100);
   camera.position.set(0, 0, 5.8);
 
   scene.add(new THREE.AmbientLight(0xffffff, 3.5));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 5.5);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 6.0);
   keyLight.position.set(-5, 7, 3);
   scene.add(keyLight);
-  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.4);
+  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.5);
   fillLight.position.set(4, -3, 1);
   scene.add(fillLight);
 
@@ -163,7 +165,6 @@ function buildTestScene(renderer: THREE.WebGLRenderer) {
   scene.add(group);
 
   const mat = makeMat(0xb0b0bc);
-
   const cubeW = 1.1, cubeH = 1.5, cubeD = 1.2;
   const cubeGroup = new THREE.Group();
   const cube = new THREE.Mesh(new THREE.BoxGeometry(cubeW, cubeH, cubeD), mat);
@@ -177,27 +178,33 @@ function buildTestScene(renderer: THREE.WebGLRenderer) {
   cubeGroup.add(crack);
   group.add(cubeGroup);
 
-  const platform = new THREE.Mesh(new THREE.BoxGeometry(cubeW, 0.03, cubeW), mat);
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(cubeW, 0.04, cubeW), mat);
   platform.position.y = -cubeH / 2 - 0.4;
   group.add(platform);
 
   const clock = new THREE.Clock();
   let animId: number;
+
   function animate() {
     animId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    group.rotation.x = 0.15 + Math.sin(t * 0.12) * 0.025;
-    group.rotation.y = -0.25 + Math.sin(t * 0.085) * 0.018;
-    cubeGroup.position.y = Math.sin(t * 1.1) * 0.05;
+
+    // Calm floating and hovering
+    group.rotation.x = 0.15 + Math.sin(t * 0.35) * 0.05 - mouse.y * 0.18;
+    group.rotation.y = -0.25 + Math.sin(t * 0.30) * 0.06 + mouse.x * 0.18;
+    group.position.y = Math.sin(t * 0.4) * 0.03;
+
+    // Gentle cube separation hover
+    cubeGroup.position.y = Math.sin(t * 0.6) * 0.05;
+
     renderer.render(scene, camera);
   }
   animate();
   return () => cancelAnimationFrame(animId);
 }
 
-function buildRefineScene(renderer: THREE.WebGLRenderer) {
+function buildRefineScene(renderer: THREE.WebGLRenderer, mouse: MouseState) {
   const scene = new THREE.Scene();
-
   const camera = new THREE.PerspectiveCamera(34, 340 / 510, 0.1, 100);
   camera.position.set(0, 0, 5.8);
 
@@ -205,7 +212,7 @@ function buildRefineScene(renderer: THREE.WebGLRenderer) {
   const keyLight = new THREE.DirectionalLight(0xffffff, 7.5);
   keyLight.position.set(-5, 7, 3);
   scene.add(keyLight);
-  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.4);
+  const fillLight = new THREE.DirectionalLight(0xbbbbdd, 0.5);
   fillLight.position.set(4, -3, 1);
   scene.add(fillLight);
 
@@ -228,12 +235,21 @@ function buildRefineScene(renderer: THREE.WebGLRenderer) {
 
   const clock = new THREE.Clock();
   let animId: number;
+
   function animate() {
     animId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    group.rotation.x = Math.sin(t * 0.1) * 0.02;
-    group.rotation.y = 0.22 + Math.sin(t * 0.07) * 0.015;
-    centerPlate.position.x = Math.sin(t * 1.3) * 0.09;
+
+    // Calm floating rotation + subtle mouse tilt
+    group.rotation.x = Math.sin(t * 0.35) * 0.05 - mouse.y * 0.18;
+    group.rotation.y = 0.22 + Math.sin(t * 0.30) * 0.06 + mouse.x * 0.18;
+    group.position.y = Math.sin(t * 0.4) * 0.03;
+
+    // Gentle sliding dynamic plates
+    centerPlate.position.y = Math.sin(t * 0.7) * 0.06;
+    leftPlate.position.y = Math.sin(t * 0.45) * 0.035;
+    rightPlate.position.y = -Math.sin(t * 0.45) * 0.035;
+
     renderer.render(scene, camera);
   }
   animate();
@@ -242,40 +258,66 @@ function buildRefineScene(renderer: THREE.WebGLRenderer) {
 
 const SCENE_BUILDERS = [buildDiscoverScene, buildDesignScene, buildTestScene, buildRefineScene];
 
-// ─── Single Three.js card ─────────────────────────────────────────────────────
+// ─── Single Three.js card with Mouse Tilt Interactivity ────────────────────────
 interface ThreeCardProps {
-  buildScene: (renderer: THREE.WebGLRenderer) => () => void;
+  buildScene: (renderer: THREE.WebGLRenderer, mouse: MouseState) => () => void;
 }
 
 function ThreeCard({ buildScene }: ThreeCardProps) {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const mountEl = mountRef.current;
+    if (!mountEl) return;
 
     const W = 340, H = 510;
-    // alpha:true → renderer produces transparent pixels where no object is drawn
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.35;
-    // No setClearColor needed — alpha:true keeps it transparent by default
 
-    mountRef.current.appendChild(renderer.domElement);
+    mountEl.appendChild(renderer.domElement);
 
-    const cancelAnim = buildScene(renderer);
+    const mouse: MouseState = { x: 0, y: 0 };
+    let targetX = 0;
+    let targetY = 0;
+    let mouseRaf: number;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = mountEl.getBoundingClientRect();
+      targetX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+      targetY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    };
+
+    const handleMouseLeave = () => {
+      targetX = 0;
+      targetY = 0;
+    };
+
+    const smoothMouse = () => {
+      mouse.x += (targetX - mouse.x) * 0.08;
+      mouse.y += (targetY - mouse.y) * 0.08;
+      mouseRaf = requestAnimationFrame(smoothMouse);
+    };
+    smoothMouse();
+
+    mountEl.addEventListener('mousemove', handleMouseMove);
+    mountEl.addEventListener('mouseleave', handleMouseLeave);
+
+    const cancelAnim = buildScene(renderer, mouse);
 
     return () => {
       cancelAnim();
+      cancelAnimationFrame(mouseRaf);
+      mountEl.removeEventListener('mousemove', handleMouseMove);
+      mountEl.removeEventListener('mouseleave', handleMouseLeave);
       renderer.dispose();
-      if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        mountRef.current.removeChild(renderer.domElement);
+      if (mountEl && renderer.domElement.parentNode === mountEl) {
+        mountEl.removeChild(renderer.domElement);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [buildScene]);
 
   return <div ref={mountRef} className="process-three-mount" />;
 }
@@ -288,7 +330,7 @@ export default function Process() {
         <SectionHeader
           eyebrow="How I work"
           title="From concept to visual art."
-          body="A focused graphic design workflow—transforming abstract ideas into polished, high-impact visuals through deliberate composition, typography, and color harmony."
+          body="A focused graphic design workflow by transforming abstract ideas into polished, high-impact visuals through deliberate composition, typography, and color harmony."
         />
       </ScrollReveal>
 

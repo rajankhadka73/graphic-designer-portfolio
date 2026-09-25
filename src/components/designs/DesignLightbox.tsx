@@ -78,36 +78,10 @@ export default function DesignLightbox({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Direct link/download */}
-          <a
-            href={currentDesign.image}
-            target="_blank"
-            rel="noopener noreferrer"
-            download={currentDesign.filename}
-            className="p-2 text-white/70 hover:text-white transition-colors border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 flex items-center justify-center"
-            title="Open original image"
-            aria-label="Open original image"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
-
           {/* Close button */}
           <button
             onClick={onClose}
-            className="p-2 text-white/70 hover:text-white transition-colors border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 flex items-center justify-center"
+            className="p-2 text-white/70 hover:text-white transition-colors border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 flex items-center justify-center cursor-pointer"
             aria-label="Close image viewer"
           >
             <svg
@@ -135,7 +109,7 @@ export default function DesignLightbox({
         {/* Prev Arrow */}
         <button
           onClick={handlePrev}
-          className="absolute left-0 sm:-left-12 lg:-left-16 p-3 text-white/60 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/20 z-20"
+          className="absolute left-0 sm:-left-12 lg:-left-16 p-3 text-white/60 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/20 z-20 cursor-pointer"
           aria-label="Previous design"
         >
           <svg
@@ -165,7 +139,7 @@ export default function DesignLightbox({
         {/* Next Arrow */}
         <button
           onClick={handleNext}
-          className="absolute right-0 sm:-right-12 lg:-right-16 p-3 text-white/60 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/20 z-20"
+          className="absolute right-0 sm:-right-12 lg:-right-16 p-3 text-white/60 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/20 z-20 cursor-pointer"
           aria-label="Next design"
         >
           <svg
@@ -183,13 +157,15 @@ export default function DesignLightbox({
         </button>
       </div>
 
-      {/* Bottom info caption */}
+      {/* Bottom info caption without thin border */}
       <div
-        className="w-full max-w-6xl flex items-center justify-between z-10 py-2 border-t border-white/10 text-white/50 text-xs"
+        className="w-full max-w-6xl flex items-center justify-between z-10 py-2 text-white/50 text-xs"
         onClick={(e) => e.stopPropagation()}
       >
-        <span>Press <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 text-white text-[11px]">←</kbd> <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 text-white text-[11px]">→</kbd> to navigate, <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 text-white text-[11px]">Esc</kbd> to exit</span>
-        <span className="uppercase font-mono tracking-wider">{currentDesign.category}</span>
+        <span>
+          Press <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 text-white text-[11px]">Esc</kbd> to close
+        </span>
+        <span className="text-white/70 font-medium tracking-normal">{currentDesign.category}</span>
       </div>
     </div>
   );

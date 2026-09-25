@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import SectionHeader from '@/components/ui/SectionHeader';
 import DesignsGallery from '@/components/designs/DesignsGallery';
+import DesignsNavControls from '@/components/designs/DesignsNavControls';
 import { getAllDesigns } from '@/lib/designs';
 
 export const metadata: Metadata = {
@@ -15,30 +15,9 @@ export default function DesignsPage() {
   const designs = getAllDesigns();
 
   return (
-    <main className="page-section pt-28 sm:pt-32 md:pt-36 pb-24">
-      {/* Back to Home link */}
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-xs md:text-sm font-medium tracking-wide uppercase text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors group"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-transform group-hover:-translate-x-1"
-          >
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-          Back to Home
-        </Link>
-      </div>
+    <main className="page-section pt-24 sm:pt-28 md:pt-32 pb-24 relative min-h-screen">
+      {/* Sticky/Fixed Back Button, ThemeToggle, and Scroll to Top */}
+      <DesignsNavControls />
 
       {/* Page Header */}
       <div className="mb-10 md:mb-12">
@@ -49,7 +28,7 @@ export default function DesignsPage() {
         />
       </div>
 
-      {/* Responsive Gallery */}
+      {/* Responsive Gallery with Brand Categories & Chevron Scroll */}
       <DesignsGallery initialDesigns={designs} />
     </main>
   );

@@ -17,7 +17,9 @@ export default function Skills() {
   const rafRef = useRef<number>(0);
   const wallsRef = useRef<{ bottom: Matter.Body; left: Matter.Body; right: Matter.Body } | null>(null);
 
-  useEffect(() => { setIsClient(true); }, []);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
@@ -30,14 +32,13 @@ export default function Skills() {
     bodiesRef.current.forEach(({ body, width: bw, height: bh }) => {
       const rx = Math.random() * (w - bw) + bw / 2;
       const ry = -(Math.random() * 200 + bh + 30); // fall from above top edge
-      
+
       // Wake up the body and reset velocities
       Matter.Body.setPosition(body, { x: rx, y: ry });
       Matter.Body.setVelocity(body, { x: (Math.random() - 0.5) * 3, y: 0 });
       Matter.Body.setAngularVelocity(body, 0);
-      Matter.Body.setAngle(body, 0); // always horizontal
-      
-      // Explicitly wake up in case it was sleeping
+      Matter.Body.setAngle(body, 0); // start horizontal
+
       if ((body as any).isSleeping) {
         Matter.Sleeping.set(body, false);
       }
@@ -48,48 +49,86 @@ export default function Skills() {
     if (!isClient) return;
 
     let localCleanUp: (() => void) | undefined;
+    let initialized = false;
 
+    const startPhysics = () => {
+      if (initialized) return;
+      const container = containerRef.current;
+      if (!container) return;
+      initialized = true;
+      localCleanUp = initPhysics(container);
+    };
+
+    // 1. Immediate check if already visible or nearly visible
+    const container = containerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 150) {
+        startPhysics();
+      }
+    }
+
+    // 2. IntersectionObserver trigger for guaranteed activation
+    let observer: IntersectionObserver | null = null;
+    if (!initialized && container && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            startPhysics();
+            if (observer) {
+              observer.disconnect();
+              observer = null;
+            }
+          }
+        },
+        { rootMargin: '100px 0px' }
+      );
+      observer.observe(container);
+    }
+
+    // 3. GSAP ScrollTrigger backup
     Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(
       ([{ gsap }, { ScrollTrigger }]) => {
         gsap.registerPlugin(ScrollTrigger);
-        const container = containerRef.current;
-        if (!container) return;
-
-        ScrollTrigger.create({
-          trigger: container,
-          start: 'top bottom-=50px',
-          onEnter: () => { localCleanUp = initPhysics(container); },
-          once: true,
-        });
+        if (container && !initialized) {
+          ScrollTrigger.create({
+            trigger: container,
+            start: 'top bottom-=50px',
+            onEnter: () => {
+              startPhysics();
+            },
+            once: true,
+          });
+        }
       }
     );
 
-    function initPhysics(container: HTMLDivElement) {
+    function initPhysics(cont: HTMLDivElement) {
       const { Engine, World, Bodies, Mouse, MouseConstraint, Runner, Events } = Matter;
 
       const eng = Engine.create({ constraintIterations: 4, positionIterations: 8, velocityIterations: 8 });
       eng.gravity.y = 1.0;
       engineRef.current = eng;
 
-      const cr = container.getBoundingClientRect();
-      const W = cr.width;
-      const H = cr.height;
+      const cr = cont.getBoundingClientRect();
+      const W = cr.width || 800;
+      const H = cr.height || 420;
       const T = 100;
 
       const bottomWall = Bodies.rectangle(W / 2, H + T / 2, W, T, { isStatic: true });
-      const leftWall   = Bodies.rectangle(-T / 2, H / 2 - 500, T, H + 1000, { isStatic: true });
-      const rightWall  = Bodies.rectangle(W + T / 2, H / 2 - 500, T, H + 1000, { isStatic: true });
+      const leftWall = Bodies.rectangle(-T / 2, H / 2 - 500, T, H + 1000, { isStatic: true });
+      const rightWall = Bodies.rectangle(W + T / 2, H / 2 - 500, T, H + 1000, { isStatic: true });
       wallsRef.current = { bottom: bottomWall, left: leftWall, right: rightWall };
       World.add(eng.world, [bottomWall, leftWall, rightWall]);
 
-      const elements = container.querySelectorAll<HTMLDivElement>('.skill-physics-tag');
+      const elements = cont.querySelectorAll<HTMLDivElement>('.skill-physics-tag');
       const bodies: PhysicsBody[] = [];
 
       elements.forEach((el) => {
         el.style.opacity = '1';
         const rect = el.getBoundingClientRect();
-        const elW = rect.width;
-        const elH = rect.height;
+        const elW = rect.width || 120;
+        const elH = rect.height || 44;
 
         const rx = Math.random() * (W - elW) + elW / 2;
         const ry = -(Math.random() * 280 + elH);
@@ -99,7 +138,7 @@ export default function Skills() {
           friction: 0.04,
           frictionAir: 0.018,
           density: 0.001,
-          angle: 0, // always start horizontal so cards are readable
+          angle: 0,
         });
 
         bodies.push({ body, element: el, width: elW, height: elH });
@@ -108,16 +147,12 @@ export default function Skills() {
 
       bodiesRef.current = bodies;
 
-      // Ceiling removed to prevent blocking shuffle/drops. Lateral bounds extended instead.
-
-      // Mouse constraint — do NOT lock inertia so rotation stays free
-      const mouse = Mouse.create(container);
+      const mouse = Mouse.create(cont);
       (mouse as any).element.removeEventListener('mousewheel', (mouse as any).mousewheel);
-      // Remove touchstart listener so mobile buttons inside container can fire
       (mouse as any).element.removeEventListener('touchstart', (mouse as any).mousedown);
       (mouse as any).element.removeEventListener('touchmove', (mouse as any).mousemove);
       (mouse as any).element.removeEventListener('touchend', (mouse as any).mouseup);
-      // Determine if a tag is being touched to selectively block page scrolling
+
       let isDraggingTag = false;
 
       const touchStartHandler = (e: TouchEvent) => {
@@ -126,23 +161,23 @@ export default function Skills() {
 
         if (isTag) {
           isDraggingTag = true;
-          e.preventDefault(); // Stop page scrolling when starting a tag drag
+          e.preventDefault();
         } else {
           isDraggingTag = false;
         }
 
         const touch = e.changedTouches[0];
-        const rect = container.getBoundingClientRect();
+        const rect = cont.getBoundingClientRect();
         mouse.position.x = touch.clientX - rect.left;
         mouse.position.y = touch.clientY - rect.top;
         (mouse as any).button = 0;
       };
       const touchMoveHandler = (e: TouchEvent) => {
         if (isDraggingTag) {
-          e.preventDefault(); // Prevent page scrolling during drag
+          e.preventDefault();
         }
         const touch = e.changedTouches[0];
-        const rect = container.getBoundingClientRect();
+        const rect = cont.getBoundingClientRect();
         mouse.position.x = touch.clientX - rect.left;
         mouse.position.y = touch.clientY - rect.top;
       };
@@ -150,20 +185,18 @@ export default function Skills() {
         (mouse as any).button = -1;
         isDraggingTag = false;
       };
-      container.addEventListener('touchstart', touchStartHandler, { passive: false });
-      container.addEventListener('touchmove', touchMoveHandler, { passive: false });
-      container.addEventListener('touchend', touchEndHandler, { passive: true });
+      cont.addEventListener('touchstart', touchStartHandler, { passive: false });
+      cont.addEventListener('touchmove', touchMoveHandler, { passive: false });
+      cont.addEventListener('touchend', touchEndHandler, { passive: true });
 
       const mc = MouseConstraint.create(eng, {
         mouse,
         constraint: { stiffness: 0.12, render: { visible: false } },
       });
 
-      // Give a gentle angular impulse on release so throws feel rotational
       Events.on(mc, 'enddrag', (evt: any) => {
         const b: Matter.Body = evt.body;
         if (b) {
-          // Angular velocity proportional to linear throw speed, capped
           const speed = Math.sqrt(b.velocity.x ** 2 + b.velocity.y ** 2);
           const dir = b.velocity.x > 0 ? 1 : -1;
           Matter.Body.setAngularVelocity(b, clamp(dir * speed * 0.012, -0.25, 0.25));
@@ -177,11 +210,12 @@ export default function Skills() {
       };
 
       const handleResize = () => {
-        const nr = container.getBoundingClientRect();
-        const nW = nr.width; const nH = nr.height;
+        const nr = cont.getBoundingClientRect();
+        const nW = nr.width;
+        const nH = nr.height;
         Matter.Body.setPosition(bottomWall, { x: nW / 2, y: nH + T / 2 });
-        Matter.Body.setPosition(leftWall,   { x: -T / 2, y: nH / 2 - 500 });
-        Matter.Body.setPosition(rightWall,  { x: nW + T / 2, y: nH / 2 - 500 });
+        Matter.Body.setPosition(leftWall, { x: -T / 2, y: nH / 2 - 500 });
+        Matter.Body.setPosition(rightWall, { x: nW + T / 2, y: nH / 2 - 500 });
       };
 
       window.addEventListener('mouseup', handleMouseUp);
@@ -193,8 +227,9 @@ export default function Skills() {
       Runner.run(runner, eng);
 
       function updatePositions() {
-        const nr = container.getBoundingClientRect();
-        const cW = nr.width; const cH = nr.height;
+        const nr = cont.getBoundingClientRect();
+        const cW = nr.width;
+        const cH = nr.height;
         bodies.forEach(({ body, element, width: bw, height: bh }) => {
           const x = clamp(body.position.x, bw / 2, cW - bw / 2);
           const y = clamp(body.position.y, bh / 2, cH - bh / 2);
@@ -207,13 +242,14 @@ export default function Skills() {
       return () => {
         window.removeEventListener('mouseup', handleMouseUp);
         window.removeEventListener('resize', handleResize);
-        container.removeEventListener('touchstart', touchStartHandler);
-        container.removeEventListener('touchmove', touchMoveHandler);
-        container.removeEventListener('touchend', touchEndHandler);
+        cont.removeEventListener('touchstart', touchStartHandler);
+        cont.removeEventListener('touchmove', touchMoveHandler);
+        cont.removeEventListener('touchend', touchEndHandler);
       };
     }
 
     return () => {
+      if (observer) observer.disconnect();
       cancelAnimationFrame(rafRef.current);
       if (runnerRef.current) Matter.Runner.stop(runnerRef.current);
       if (engineRef.current) Matter.Engine.clear(engineRef.current);
@@ -227,7 +263,7 @@ export default function Skills() {
         <SectionHeader
           eyebrow="Skills & tools"
           title="Tools I reach for."
-          body="Specialized in visual communication, branding, and digital design—combining artistic instinct with industry-standard design tools."
+          body="Specialized in visual communication, branding, and digital design by combining artistic instinct with industry-standard design tools."
         />
       </ScrollReveal>
 
@@ -254,7 +290,7 @@ export default function Skills() {
             ↺ Shuffle
           </button>
 
-          {/* Drag tip — top-right, not selectable */}
+          {/* Drag tip — top-right */}
           <div className="skills-drag-tip">
             Drag to toss
           </div>

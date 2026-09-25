@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-// import { Inter, Syne } from 'next/font/google';
 import { Inter, Barlow_Condensed } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider, themeInitScript } from '@/providers/ThemeProvider';
 import { SmoothScrollProvider } from '@/providers/SmoothScrollProvider';
@@ -13,13 +13,6 @@ const inter = Inter({
   variable: '--font-sans',
   display: 'swap',
 });
-
-// const syne = Syne({
-//   subsets: ['latin'],
-//   variable: '--font-display',
-//   weight: ['700', '800'],
-//   display: 'swap',
-// });
 
 const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
@@ -47,14 +40,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      // className={`${inter.variable} ${syne.variable}`}
       className={`${inter.variable} ${barlowCondensed.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
-      <body>
+      <body suppressHydrationWarning>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <ThemeProvider>
           <SmoothScrollProvider>
             <Navbar />

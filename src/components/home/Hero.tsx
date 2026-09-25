@@ -35,7 +35,7 @@ export default function Hero() {
         loop
         playsInline
       >
-        <source src="/portfolio resources/sky-cloud.mp4" type="video/mp4" />
+        <source src="/portfolio-resources/sky-cloud.mp4" type="video/mp4" />
       </video>
       <div id="hero-overlay" />
       <div className="hero-text-layer">
@@ -48,15 +48,15 @@ export default function Hero() {
         <div className="hero-cv-container min-w-fit">
           <div className="cv-btn-group hero-cv-group min-w-fit h-8 lg:h-10">
             <a
-              href="/portfolio%20resources/Rajan-Khadka-Resume.pdf"
+              href="/portfolio-resources/Rajan-Khadka-Resume.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="cv-btn-view lg:px-4 text-sm"
             >
-              Resume
+              View Resume
             </a>
             <a
-              href="/portfolio%20resources/Rajan-Khadka-Resume.pdf"
+              href="/portfolio-resources/Rajan-Khadka-Resume.pdf"
               download="Rajan-Khadka-Resume.pdf"
               className="cv-btn-download lg:px-4 min-w-fit"
               aria-label="Download Resume"
